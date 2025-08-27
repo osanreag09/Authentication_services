@@ -8,6 +8,7 @@ import co.com.crediya.r2dbc.mapper.DataMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -23,6 +24,7 @@ public class MyReactiveRepositoryAdapter extends ReactiveAdapterOperations<
     }
 
     @Override
+    @Transactional
     public Mono<User> saveUser(User user) {
         UserEntity userEntity = DataMapper.toEntity(user);
         log.info("Saving user: {}", userEntity);
@@ -31,6 +33,7 @@ public class MyReactiveRepositoryAdapter extends ReactiveAdapterOperations<
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Mono<Boolean> existByEmail(String email) {
         return repository.existsByEmail(email);
     }
