@@ -1,29 +1,77 @@
 package co.com.crediya.api;
 
+import co.com.crediya.api.dtos.UserRequestDTO;
+import co.com.crediya.api.dtos.UserResponseDTO;
+import co.com.crediya.api.mappers.UserMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+import co.com.crediya.r2dbc.adapter.RegisterUserAdapter;
+
 @Component
 @RequiredArgsConstructor
 public class Handler {
-//private  final UseCase useCase;
-//private  final UseCase2 useCase2;
+private final Validator validator;
+private final RegisterUserAdapter registerUserAdapter;
 
-    public Mono<ServerResponse> listenGETUseCase(ServerRequest serverRequest) {
-        // useCase.logic();
-        return ServerResponse.ok().bodyValue("");
-    }
-
-    public Mono<ServerResponse> listenGETOtherUseCase(ServerRequest serverRequest) {
-        // useCase2.logic();
-        return ServerResponse.ok().bodyValue("");
-    }
-
-    public Mono<ServerResponse> listenPOSTUseCase(ServerRequest serverRequest) {
-        // useCase.logic();
-        return ServerResponse.ok().bodyValue("");
+    @Operation(summary = "Register a new user", description = "Creates a new user with the provided information")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "User registered successfully",
+            content = @Content(
+                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                schema = @Schema(implementation = UserResponseDTO.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Invalid input data",
+            content = @Content(
+                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                schema = @Schema(implementation = Map.class),
+                examples = @ExampleObject(
+                    value = "{\"error\": \"Validation error: Email is required, First name is required\"}"
+                )
+            )
+        )
+    })
+    public Mono<ServerResponse> registerUser(ServerRequest request) {
+        return request.bodyToMono(UserRequestDTO.class)
+                .flatMap(dto -> {
+                    var violations = validator.validate(dto);
+                    if (!violations.isEmpty()) {
+                        String errorMsg = violations.stream()
+                                .map(ConstraintViolation::getMessage)
+                                .reduce((a, b) -> a + ", " + b)
+                                .orElse("Validation error");
+                        return ServerResponse.badRequest()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(Map.of("error", errorMsg));
+                    }
+                    return Mono.just(dto)
+                            .map(UserMapper::toDomain)
+                            .flatMap(registerUserAdapter::registerUser)
+                            .map(UserMapper::toResponse)
+                            .flatMap(dtoResp -> ServerResponse.ok()
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .bodyValue(dtoResp));
+                })
+                .onErrorResume(e -> ServerResponse.badRequest()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(Map.of("error", e.getMessage())));
     }
 }

@@ -2,6 +2,7 @@ package co.com.crediya.api;
 
 import co.com.crediya.api.dtos.UserRequestDTO;
 import co.com.crediya.model.user.User;
+import co.com.crediya.r2dbc.adapter.RegisterUserAdapter;
 import co.com.crediya.usecase.registeruser.RegisterUserUseCase;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -29,10 +30,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class UserHandlerTest {
+class HandlerTest {
 
     @Mock
-    private RegisterUserUseCase registerUserUseCase;
+    private RegisterUserAdapter registerUserUseCase;
 
     @Mock
     private Validator validator;
@@ -41,7 +42,7 @@ class UserHandlerTest {
     private ServerRequest serverRequest;
 
     @InjectMocks
-    private UserHandler userHandler;
+    private Handler handler;
 
     private UserRequestDTO validUserRequest;
     private User savedUser;
@@ -74,18 +75,18 @@ class UserHandlerTest {
     void registerUser_WithValidData_ReturnsCreated() {
         // Arrange
         when(validator.validate(any())).thenReturn(Collections.emptySet());
-        when(registerUserUseCase.saveUser(any(User.class))).thenReturn(Mono.just(savedUser));
+        when(registerUserUseCase.registerUser(any(User.class))).thenReturn(Mono.just(savedUser));
         when(serverRequest.bodyToMono(UserRequestDTO.class))
                 .thenReturn(Mono.just(validUserRequest));
 
         // Act & Assert
-        StepVerifier.create(userHandler.registerUser(serverRequest))
+        StepVerifier.create(handler.registerUser(serverRequest))
                 .assertNext(serverResponse -> {
                     assertEquals(200, serverResponse.statusCode().value());
                 })
                 .verifyComplete();
 
-        verify(registerUserUseCase).saveUser(any(User.class));
+        verify(registerUserUseCase).registerUser(any(User.class));
         verify(validator).validate(any(UserRequestDTO.class));
     }
 
@@ -107,7 +108,7 @@ class UserHandlerTest {
                 .thenReturn(Mono.just(invalidRequest));
 
         // Act
-        Mono<ServerResponse> responseMono = userHandler.registerUser(serverRequest);
+        Mono<ServerResponse> responseMono = handler.registerUser(serverRequest);
 
         // Assert
         StepVerifier.create(responseMono)
@@ -117,7 +118,7 @@ class UserHandlerTest {
                 .verifyComplete();
 
         verify(validator).validate(any(UserRequestDTO.class));
-        verify(registerUserUseCase, never()).saveUser(any(User.class));
+        verify(registerUserUseCase, never()).registerUser(any(User.class));
     }
 
     @Test

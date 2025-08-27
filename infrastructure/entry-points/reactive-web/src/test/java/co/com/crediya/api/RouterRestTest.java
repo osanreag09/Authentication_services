@@ -1,6 +1,7 @@
 package co.com.crediya.api;
 
 import co.com.crediya.model.user.User;
+import co.com.crediya.r2dbc.adapter.RegisterUserAdapter;
 import co.com.crediya.usecase.registeruser.RegisterUserUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,19 +26,19 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(SpringExtension.class)
 @WebFluxTest
-@ContextConfiguration(classes = {RouterRest.class, UserHandler.class, RouterRestTest.TestConfig.class})
+@ContextConfiguration(classes = {RouterRest.class, Handler.class, RouterRestTest.TestConfig.class})
 class RouterRestTest {
 
     @Autowired
     private WebTestClient webTestClient;
 
     @Mock
-    private static RegisterUserUseCase registerUserUseCase;
+    private static RegisterUserAdapter registerUserUseCase;
 
     @TestConfiguration
     static class TestConfig {
         @Bean
-        public RegisterUserUseCase registerUserUseCase() {
+        public RegisterUserAdapter registerUserUseCase() {
             return registerUserUseCase;
         }
         
@@ -79,7 +80,7 @@ class RouterRestTest {
                 .email("test@example.com")
                 .build();
 
-        when(registerUserUseCase.saveUser(any(User.class))).thenReturn(Mono.just(mockUser));
+        when(registerUserUseCase.registerUser(any(User.class))).thenReturn(Mono.just(mockUser));
 
         // When & Then
         webTestClient.post()
