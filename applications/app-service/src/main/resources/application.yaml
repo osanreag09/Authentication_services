@@ -11,6 +11,17 @@ spring:
       path: "/h2"
   profiles:
     include: null
+adapters:
+  r2dbc:
+    host: localhost
+    port: 5432
+    database: users_db
+    schema: public
+    username: admin
+    password: admin123
+    pool:
+      initial-size: 5
+      max-size: 20
 management:
   endpoints:
     web:

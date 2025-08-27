@@ -1,6 +1,38 @@
 package co.com.crediya.usecase.registeruser;
 
-import lombok.RequiredArgsConstructor;
-@RequiredArgsConstructor
+import co.com.crediya.model.user.User;
+import co.com.crediya.model.user.gateways.UserRepository;
+import co.com.crediya.usecase.registeruser.exception.InvalidUserDataException;
+import reactor.core.publisher.Mono;
+
 public class RegisterUserUseCase {
+    private static final Long MAX_BASE_SALARY = 15000000L;
+    private static final Long MIN_BASE_SALARY = 0L;
+
+    private final UserRepository userRepository;
+
+    public RegisterUserUseCase(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    public Mono<User> saveUser(User user) {
+        Mono<User> error = validateUserSalary(user);
+        if (error != null) return error;
+
+        return userRepository.existByEmail(user.getEmail())
+                .flatMap(exist -> {
+                    if(exist) {
+                        return Mono.error(new InvalidUserDataException("The email is already in use"));
+                    } else {
+                        return userRepository.saveUser(user);
+                    }
+                });
+    }
+
+    private static Mono<User> validateUserSalary(User user) {
+        if(user.getBaseSalary() < MIN_BASE_SALARY || user.getBaseSalary() > MAX_BASE_SALARY) {
+            return Mono.error(new InvalidUserDataException("The base salary must be between 0 and 15000000"));
+        }
+        return null;
+    }
 }
