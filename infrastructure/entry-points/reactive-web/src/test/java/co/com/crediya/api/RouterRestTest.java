@@ -1,8 +1,7 @@
 package co.com.crediya.api;
 
 import co.com.crediya.model.user.User;
-import co.com.crediya.r2dbc.adapter.RegisterUserAdapter;
-import co.com.crediya.usecase.registeruser.RegisterUserUseCase;
+import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,12 +32,12 @@ class RouterRestTest {
     private WebTestClient webTestClient;
 
     @Mock
-    private static RegisterUserAdapter registerUserUseCase;
+    private static RegisterUser registerUserUseCase;
 
     @TestConfiguration
     static class TestConfig {
         @Bean
-        public RegisterUserAdapter registerUserUseCase() {
+        public RegisterUser registerUserUseCase() {
             return registerUserUseCase;
         }
         

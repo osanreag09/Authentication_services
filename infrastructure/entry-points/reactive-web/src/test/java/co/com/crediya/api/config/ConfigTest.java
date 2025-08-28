@@ -2,7 +2,7 @@ package co.com.crediya.api.config;
 
 import co.com.crediya.api.Handler;
 import co.com.crediya.api.RouterRest;
-import co.com.crediya.r2dbc.adapter.RegisterUserAdapter;
+import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,7 @@ class ConfigTest {
     private WebTestClient webTestClient;
 
     @MockitoBean
-    private RegisterUserAdapter registerUserUseCase;
+    private RegisterUser registerUser;
 
     @MockitoBean
     private Validator validator;

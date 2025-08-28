@@ -8,6 +8,7 @@ import co.com.crediya.r2dbc.mapper.DataMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.ReactiveTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
@@ -19,8 +20,8 @@ public class MyReactiveRepositoryAdapter extends ReactiveAdapterOperations<
         Long,
     MyReactiveRepository
 > implements UserRepository {
-    public MyReactiveRepositoryAdapter(MyReactiveRepository repository, ObjectMapper mapper) {
-        super(repository, mapper, d -> mapper.map(d, User.class));
+    public MyReactiveRepositoryAdapter(MyReactiveRepository repository, ObjectMapper mapper,  ReactiveTransactionManager transactionManager) {
+        super(repository, mapper, d -> mapper.map(d, User.class), transactionManager);
     }
 
     @Override

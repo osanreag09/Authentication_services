@@ -3,6 +3,7 @@ package co.com.crediya.api;
 import co.com.crediya.api.dtos.UserRequestDTO;
 import co.com.crediya.api.dtos.UserResponseDTO;
 import co.com.crediya.api.mappers.UserMapper;
+import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -19,13 +20,12 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
-import co.com.crediya.r2dbc.adapter.RegisterUserAdapter;
 
 @Component
 @RequiredArgsConstructor
 public class Handler {
 private final Validator validator;
-private final RegisterUserAdapter registerUserAdapter;
+private final RegisterUser registerUser;
 
     @Operation(summary = "Register a new user", description = "Creates a new user with the provided information")
     @ApiResponses(value = {
@@ -64,7 +64,7 @@ private final RegisterUserAdapter registerUserAdapter;
                     }
                     return Mono.just(dto)
                             .map(UserMapper::toDomain)
-                            .flatMap(registerUserAdapter::registerUser)
+                            .flatMap(registerUser::registerUser)
                             .map(UserMapper::toResponse)
                             .flatMap(dtoResp -> ServerResponse.ok()
                                     .contentType(MediaType.APPLICATION_JSON)

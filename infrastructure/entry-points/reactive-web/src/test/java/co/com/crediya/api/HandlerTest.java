@@ -2,8 +2,7 @@ package co.com.crediya.api;
 
 import co.com.crediya.api.dtos.UserRequestDTO;
 import co.com.crediya.model.user.User;
-import co.com.crediya.r2dbc.adapter.RegisterUserAdapter;
-import co.com.crediya.usecase.registeruser.RegisterUserUseCase;
+import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +32,7 @@ import static org.mockito.Mockito.when;
 class HandlerTest {
 
     @Mock
-    private RegisterUserAdapter registerUserUseCase;
+    private RegisterUser registerUserUseCase;
 
     @Mock
     private Validator validator;

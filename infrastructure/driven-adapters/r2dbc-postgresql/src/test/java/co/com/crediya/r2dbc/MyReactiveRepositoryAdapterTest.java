@@ -10,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.reactivecommons.utils.ObjectMapper;
+import org.springframework.transaction.ReactiveTransactionManager;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import java.time.LocalDate;
@@ -29,6 +30,9 @@ class MyReactiveRepositoryAdapterTest {
 
     @Mock
     private ObjectMapper objectMapper;
+
+    @Mock
+    private ReactiveTransactionManager transactionManager;
 
     @InjectMocks
     private MyReactiveRepositoryAdapter repositoryAdapter;
