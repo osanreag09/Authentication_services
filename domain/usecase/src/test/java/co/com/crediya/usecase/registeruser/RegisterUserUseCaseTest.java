@@ -53,13 +53,13 @@ class RegisterUserUseCaseTest {
     }
 
     @Test
-    void saveUser_WithValidData_ShouldSaveUser() {
+    void saveUser_WithValidData_ShouldRegisterUser() {
         // Arrange
         when(userRepository.existByEmail(validUser.getEmail())).thenReturn(Mono.just(false));
         when(userRepository.saveUser(validUser)).thenReturn(Mono.just(validUser));
 
         // Act & Assert
-        StepVerifier.create(registerUserUseCase.saveUser(validUser))
+        StepVerifier.create(registerUserUseCase.registerUser(validUser))
                 .expectNext(validUser)
                 .verifyComplete();
 
@@ -68,12 +68,12 @@ class RegisterUserUseCaseTest {
     }
 
     @Test
-    void saveUser_WithExistingEmail_ShouldReturnError() {
+    void registerUser_WithExistingEmail_ShouldReturnError() {
         // Arrange
         when(userRepository.existByEmail(existingEmailUser.getEmail())).thenReturn(Mono.just(true));
 
         // Act & Assert
-        StepVerifier.create(registerUserUseCase.saveUser(existingEmailUser))
+        StepVerifier.create(registerUserUseCase.registerUser(existingEmailUser))
                 .expectErrorMatches(throwable -> 
                     throwable instanceof InvalidUserDataException &&
                     throwable.getMessage().equals("The email is already in use")
@@ -85,9 +85,9 @@ class RegisterUserUseCaseTest {
     }
 
     @Test
-    void saveUser_WithHighSalary_ShouldReturnError() {
+    void registerUser_WithHighSalary_ShouldReturnError() {
         // Act & Assert
-        StepVerifier.create(registerUserUseCase.saveUser(userWithHighSalary))
+        StepVerifier.create(registerUserUseCase.registerUser(userWithHighSalary))
                 .expectErrorMatches(throwable ->
                     throwable instanceof InvalidUserDataException &&
                     throwable.getMessage().equals("The base salary must be between 0 and 15000000")
@@ -98,9 +98,9 @@ class RegisterUserUseCaseTest {
     }
 
     @Test
-    void saveUser_WithNegativeSalary_ShouldReturnError() {
+    void registerUser_WithNegativeSalary_ShouldReturnError() {
         // Act & Assert
-        StepVerifier.create(registerUserUseCase.saveUser(userWithLowSalary))
+        StepVerifier.create(registerUserUseCase.registerUser(userWithLowSalary))
                 .expectErrorMatches(throwable ->
                     throwable instanceof InvalidUserDataException &&
                     throwable.getMessage().equals("The base salary must be between 0 and 15000000")
