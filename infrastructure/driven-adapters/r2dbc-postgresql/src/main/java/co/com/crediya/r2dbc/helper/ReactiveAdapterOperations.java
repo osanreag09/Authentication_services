@@ -17,7 +17,7 @@ public abstract class ReactiveAdapterOperations<E, D, I, R extends ReactiveCrudR
     protected ObjectMapper mapper;
     private final Class<D> dataClass;
     private final Function<D, E> toEntityFn;
-    private final TransactionalOperator transactionalOperator;
+    protected final TransactionalOperator transactionalOperator;
 
     @SuppressWarnings("unchecked")
     protected ReactiveAdapterOperations(R repository,

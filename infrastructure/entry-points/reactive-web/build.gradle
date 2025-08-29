@@ -8,8 +8,11 @@ dependencies {
     implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
     implementation 'org.hibernate.validator:hibernate-validator:8.0.1.Final'
     
-    // SpringDoc OpenAPI for Swagger documentation
+    // SpringDoc OpenAPI for Swagger documentation (compatible with Spring Boot 3.5.x)
     implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.5.0'
+    implementation('org.springdoc:springdoc-openapi-starter-common') {
+        exclude group: 'org.springframework', module: 'spring-webmvc'
+    }
     
     // Jackson datatype for Java 8 date/time support
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'

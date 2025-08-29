@@ -17,10 +17,8 @@ public class RegisterUserUseCase implements RegisterUser {
     }
 
     public Mono<User> registerUser(User user) {
-        Mono<User> error = validateUserSalary(user);
-        if (error != null) return error;
-
-        return userRepository.existByEmail(user.getEmail())
+        return  validateUserSalary(user)
+                .then(userRepository.existByEmail(user.getEmail()))
                 .flatMap(exist -> {
                     if(exist) {
                         return Mono.error(new InvalidUserDataException("The email is already in use"));
@@ -30,10 +28,10 @@ public class RegisterUserUseCase implements RegisterUser {
                 });
     }
 
-    private static Mono<User> validateUserSalary(User user) {
+    private static Mono<Void> validateUserSalary(User user) {
         if(user.getBaseSalary() < MIN_BASE_SALARY || user.getBaseSalary() > MAX_BASE_SALARY) {
             return Mono.error(new InvalidUserDataException("The base salary must be between 0 and 15000000"));
         }
-        return null;
+        return Mono.empty();
     }
 }
