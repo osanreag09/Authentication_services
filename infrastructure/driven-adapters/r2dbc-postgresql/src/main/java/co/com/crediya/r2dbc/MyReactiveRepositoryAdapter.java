@@ -25,16 +25,15 @@ public class MyReactiveRepositoryAdapter extends ReactiveAdapterOperations<
     }
 
     @Override
-    @Transactional
     public Mono<User> saveUser(User user) {
         UserEntity userEntity = DataMapper.toEntity(user);
         log.info("Saving user: {}", userEntity);
         return repository.save(userEntity)
-                .map(DataMapper::toDomain);
+                .map(DataMapper::toDomain)
+                .as(transactionalOperator::transactional);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Mono<Boolean> existByEmail(String email) {
         return repository.existsByEmail(email);
     }
