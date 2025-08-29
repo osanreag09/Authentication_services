@@ -3,7 +3,6 @@ package co.com.crediya.api;
 import co.com.crediya.api.dtos.UserRequestDTO;
 import co.com.crediya.api.mappers.UserMapper;
 import co.com.crediya.api.util.ValidationUtil;
-import co.com.crediya.model.user.User;
 import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
 import co.com.crediya.usecase.registeruser.gateways.UserInfo;
 import jakarta.validation.Validator;
@@ -13,9 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
-
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -43,8 +41,9 @@ public class Handler {
                 .flatMap(dto -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(dto))
-                .switchIfEmpty(ServerResponse.status(HttpStatus.NOT_FOUND)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(Map.of("error", "User not found with email: " + email)));
+                .switchIfEmpty(Mono.error(new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "User not found: " + email
+                )));
     }
 }
