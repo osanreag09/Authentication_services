@@ -17,15 +17,17 @@ public class RegisterUserUseCase implements RegisterUser {
     }
 
     public Mono<User> registerUser(User user) {
-        return  validateUserSalary(user)
-                .then(userRepository.existByEmail(user.getEmail()))
-                .flatMap(exist -> {
-                    if(exist) {
-                        return Mono.error(new InvalidUserDataException("The email is already in use"));
-                    } else {
-                        return userRepository.saveUser(user);
-                    }
-                });
+        return validateUserSalary(user)
+                .then(Mono.defer(() ->
+                        userRepository.existByEmail(user.getEmail())
+                                .flatMap(exist -> {
+                                    if (exist) {
+                                        return Mono.error(new InvalidUserDataException("The email is already in use"));
+                                    } else {
+                                        return userRepository.saveUser(user);
+                                    }
+                                })
+                ));
     }
 
     private static Mono<Void> validateUserSalary(User user) {

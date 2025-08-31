@@ -12,7 +12,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import static org.mockito.ArgumentMatchers.any;
+import java.time.LocalDate;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,9 +34,29 @@ class RegisterUserUseCaseTest {
 
     @BeforeEach
     void setUp() {
+        userWithHighSalary = new User(1L,
+                "John",
+                "Doe",
+                LocalDate.now(),
+                "Calle siempre vida"
+                ,"1234567890"
+                ,"john.doe@example.com", 16000000L);
+
+        userWithLowSalary = new User(2L,
+                "Jane",
+                "Doe",
+                LocalDate.now(),
+                "calle siempre vida",
+                "1234567890",
+                "jane.doe@example.com",
+                -1000L);
+
         validUser = User.builder()
                 .id(1L)
-                .firstName("John")
+                .firstName("Valid")
+                .lastName("User")
+                .email("valid@example.com")
+                .baseSalary(100000.0)
                 .lastName("Doe")
                 .email("john.doe@example.com")
                 .baseSalary(50000.0)
@@ -88,25 +111,29 @@ class RegisterUserUseCaseTest {
     void registerUser_WithHighSalary_ShouldReturnError() {
         // Act & Assert
         StepVerifier.create(registerUserUseCase.registerUser(userWithHighSalary))
-                .expectErrorMatches(throwable ->
-                    throwable instanceof InvalidUserDataException &&
-                    throwable.getMessage().equals("The base salary must be between 0 and 15000000")
-                )
+                .expectErrorSatisfies(throwable -> {
+                    assertTrue(throwable instanceof InvalidUserDataException);
+                    assertEquals("The base salary must be between 0 and 15000000", throwable.getMessage());
+                })
                 .verify();
 
-        verifyNoInteractions(userRepository);
+        // Verify no repository interactions occurred since validation fails first
+        verify(userRepository, never()).existByEmail(anyString());
+        verify(userRepository, never()).saveUser(any());
     }
 
     @Test
     void registerUser_WithNegativeSalary_ShouldReturnError() {
         // Act & Assert
         StepVerifier.create(registerUserUseCase.registerUser(userWithLowSalary))
-                .expectErrorMatches(throwable ->
-                    throwable instanceof InvalidUserDataException &&
-                    throwable.getMessage().equals("The base salary must be between 0 and 15000000")
-                )
+                .expectErrorSatisfies(throwable -> {
+                    assertTrue(throwable instanceof InvalidUserDataException);
+                    assertEquals("The base salary must be between 0 and 15000000", throwable.getMessage());
+                })
                 .verify();
 
-        verifyNoInteractions(userRepository);
+        // Verify no repository interactions occurred since validation fails first
+        verify(userRepository, never()).existByEmail(anyString());
+        verify(userRepository, never()).saveUser(any());
     }
 }

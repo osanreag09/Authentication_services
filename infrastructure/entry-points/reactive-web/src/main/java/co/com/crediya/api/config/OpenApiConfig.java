@@ -27,7 +27,6 @@ public class OpenApiConfig {
                 .pathsToMatch("/api/**")
                 .addOpenApiCustomizer(openApi -> {
                     openApi.setInfo(openAPI.getInfo());
-                    // Add any additional customizations here
                 })
                 .build();
     }

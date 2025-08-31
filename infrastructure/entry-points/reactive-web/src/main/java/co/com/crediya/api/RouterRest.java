@@ -63,6 +63,44 @@ public class RouterRest {
                                     )
                             }
                     )
+            ),
+            @RouterOperation(
+                    path = "/api/v1/usuarios/{email}",
+                    method = {org.springframework.web.bind.annotation.RequestMethod.GET},
+                    beanClass = Handler.class,
+                    beanMethod = "getUserByEmail",
+                    operation = @Operation(
+                            operationId = "getUserByEmail",
+                            summary = "Get user by email",
+                            description = "Retrieves a user's details by their email address",
+                            tags = {"User"},
+                            parameters = {
+                                    @io.swagger.v3.oas.annotations.Parameter(
+                                            name = "email",
+                                            description = "Email address of the user to retrieve",
+                                            required = true,
+                                            in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH
+                                    )
+                            },
+                            responses = {
+                                    @ApiResponse(
+                                            responseCode = "200",
+                                            description = "User found and returned successfully",
+                                            content = @Content(
+                                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                                    schema = @Schema(implementation = UserResponseDTO.class)
+                                            )
+                                    ),
+                                    @ApiResponse(
+                                            responseCode = "404",
+                                            description = "User not found",
+                                            content = @Content(
+                                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                                    schema = @Schema(implementation = ErrorResponse.class)
+                                            )
+                                    )
+                            }
+                    )
             )
     })
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {

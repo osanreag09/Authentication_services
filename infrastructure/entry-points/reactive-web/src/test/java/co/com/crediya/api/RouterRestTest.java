@@ -2,6 +2,7 @@ package co.com.crediya.api;
 
 import co.com.crediya.model.user.User;
 import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
+import co.com.crediya.usecase.registeruser.gateways.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,11 +35,19 @@ class RouterRestTest {
     @Mock
     private static RegisterUser registerUserUseCase;
 
+    @Mock
+    private static UserInfo userInfo;
+
     @TestConfiguration
     static class TestConfig {
         @Bean
         public RegisterUser registerUserUseCase() {
             return registerUserUseCase;
+        }
+
+        @Bean
+        public UserInfo userInfo() {
+            return userInfo;
         }
         
         @Bean

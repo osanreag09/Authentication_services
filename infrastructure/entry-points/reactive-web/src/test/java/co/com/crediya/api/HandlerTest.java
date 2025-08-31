@@ -3,6 +3,7 @@ package co.com.crediya.api;
 import co.com.crediya.api.dtos.UserRequestDTO;
 import co.com.crediya.model.user.User;
 import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
+import co.com.crediya.usecase.registeruser.gateways.UserInfo;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,8 +12,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -33,6 +36,9 @@ class HandlerTest {
 
     @Mock
     private RegisterUser registerUserUseCase;
+
+    @Mock
+    private UserInfo userInfo;
 
     @Mock
     private Validator validator;
@@ -92,29 +98,34 @@ class HandlerTest {
     @Test
     void registerUser_WithInvalidData_ReturnsBadRequest() {
         // Arrange
-        ConstraintViolation<UserRequestDTO> violation = mock(ConstraintViolation.class);
-        when(violation.getMessage()).thenReturn("Email is required");
-
-        Set<ConstraintViolation<UserRequestDTO>> violations = Set.of(violation);
-        when(validator.validate(any(UserRequestDTO.class))).thenReturn(violations);
-
         UserRequestDTO invalidRequest = UserRequestDTO.builder()
                 .email("invalid-email")
                 .build();
 
-        // Mock the request body
+        // Create a constraint violation for the invalid email
+        ConstraintViolation<UserRequestDTO> violation = mock(ConstraintViolation.class);
+        when(violation.getMessage()).thenReturn("Email must have a valid domain");
+        Set<ConstraintViolation<UserRequestDTO>> violations = Set.of(violation);
+
+        // Mock the request body and validator
         when(serverRequest.bodyToMono(UserRequestDTO.class))
                 .thenReturn(Mono.just(invalidRequest));
+        when(validator.validate(any(UserRequestDTO.class))).thenReturn(violations);
 
         // Act
         Mono<ServerResponse> responseMono = handler.registerUser(serverRequest);
 
         // Assert
         StepVerifier.create(responseMono)
-                .assertNext(serverResponse -> {
-                    assertEquals(400, serverResponse.statusCode().value());
+                .expectErrorMatches(throwable -> {
+                    if (throwable instanceof ResponseStatusException) {
+                        ResponseStatusException ex = (ResponseStatusException) throwable;
+                        return ex.getStatusCode() == HttpStatus.BAD_REQUEST &&
+                               ex.getReason().contains("Email must have a valid domain");
+                    }
+                    return false;
                 })
-                .verifyComplete();
+                .verify();
 
         verify(validator).validate(any(UserRequestDTO.class));
         verify(registerUserUseCase, never()).registerUser(any(User.class));
@@ -130,5 +141,51 @@ class HandlerTest {
             );
         }
         assertTrue(violations.isEmpty(), "There are validation errors in the test data");
+    }
+
+    @Test
+    void getUserByEmail_WhenUserExists_ReturnsUser() {
+        // Arrange
+        String email = "test@example.com";
+        User user = User.builder()
+                .id(1L)
+                .email(email)
+                .firstName("Test")
+                .lastName("User")
+                .build();
+
+        when(serverRequest.pathVariable("email")).thenReturn(email);
+        when(userInfo.getUserByEmail(email)).thenReturn(Mono.just(user));
+
+        // Act & Assert
+        StepVerifier.create(handler.getUserByEmail(serverRequest))
+                .assertNext(serverResponse -> {
+                    assertEquals(HttpStatus.OK, serverResponse.statusCode());
+                })
+                .verifyComplete();
+
+        verify(userInfo).getUserByEmail(email);
+    }
+
+    @Test
+    void getUserByEmail_WhenUserNotFound_ReturnsNotFound() {
+        // Arrange
+        String email = "nonexistent@example.com";
+        when(serverRequest.pathVariable("email")).thenReturn(email);
+        when(userInfo.getUserByEmail(email)).thenReturn(Mono.empty());
+
+        // Act & Assert
+        StepVerifier.create(handler.getUserByEmail(serverRequest))
+                .expectErrorMatches(throwable -> {
+                    if (throwable instanceof ResponseStatusException) {
+                        ResponseStatusException ex = (ResponseStatusException) throwable;
+                        return ex.getStatusCode() == HttpStatus.NOT_FOUND &&
+                               ex.getReason().equals("User not found: " + email);
+                    }
+                    return false;
+                })
+                .verify();
+
+        verify(userInfo).getUserByEmail(email);
     }
 }

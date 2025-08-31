@@ -3,6 +3,7 @@ package co.com.crediya.api.config;
 import co.com.crediya.api.Handler;
 import co.com.crediya.api.RouterRest;
 import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
+import co.com.crediya.usecase.registeruser.gateways.UserInfo;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ class ConfigTest {
 
     @MockitoBean
     private RegisterUser registerUser;
+
+    @MockitoBean
+    private UserInfo userInfo;
 
     @MockitoBean
     private Validator validator;
