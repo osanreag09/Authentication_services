@@ -54,3 +54,7 @@ springdoc:
   model-and-view-allowed: false
   override-with-generic-response: false
   use-fqn: false
+
+jwt:
+  secret: AeR9$kL2#pQ7*mN5&vX8!zD4%fG6@hJ3  #${JWT_SECRET} #tu_clave_secreta_muy_larga_y_segura_aqui_1234567890
+  expiration: 86400  # 24 horas en segundos

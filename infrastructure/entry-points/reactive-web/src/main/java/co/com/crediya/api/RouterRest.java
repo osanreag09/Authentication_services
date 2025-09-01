@@ -3,6 +3,7 @@ package co.com.crediya.api;
 import co.com.crediya.api.dtos.UserRequestDTO;
 import co.com.crediya.api.dtos.UserResponseDTO;
 import co.com.crediya.api.exceptions.ErrorResponse;
+import co.com.crediya.api.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -13,10 +14,15 @@ import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.Mono;
+import java.util.Arrays;
 
+import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
@@ -103,8 +109,32 @@ public class RouterRest {
                     )
             )
     })
-    public RouterFunction<ServerResponse> routerFunction(Handler handler) {
+    public RouterFunction<ServerResponse> routerFunction(Handler handler, JwtUtil jwtUtil) {
         return route(POST("/api/v1/usuarios"), handler::registerUser)
-                .andRoute(GET("/api/v1/usuarios/{email}"), handler::getUserByEmail);
+                .andRoute(GET("/api/v1/usuarios/{email}"),
+                        request -> hasAnyRole(request, jwtUtil, "ADMIN", "ASSESSOR","CLIENT")
+                                .flatMap(hasAccess -> {
+                                    if (hasAccess) {
+                                        return handler.getUserByEmail(request);
+                                    } else {
+                                        return ServerResponse.status(FORBIDDEN).build();
+                                    }
+                                }))
+                .andRoute(POST("/api/v1/login"), handler::login);
+    }
+
+    private Mono<Boolean> hasAnyRole(ServerRequest request, JwtUtil jwtUtil, String... roles) {
+        return Mono.justOrEmpty(request.headers().firstHeader(HttpHeaders.AUTHORIZATION))
+                .filter(authHeader -> authHeader.startsWith("Bearer "))
+                .map(authHeader -> authHeader.substring(7))
+                .flatMap(token -> {
+                    try {
+                        String userRole = jwtUtil.getRoleFromToken(token);
+                        return Mono.just(Arrays.asList(roles).contains(userRole));
+                    } catch (Exception e) {
+                        return Mono.just(false);
+                    }
+                })
+                .defaultIfEmpty(false);
     }
 }

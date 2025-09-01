@@ -33,6 +33,12 @@ public class UserEntity {
     
     @Column("email")
     private String email;
+
+    @Column("rol_id")
+    private Long rolId;
+
+    @Column("password")
+    private String password;
     
     @Column("base_salary")
     private double baseSalary;

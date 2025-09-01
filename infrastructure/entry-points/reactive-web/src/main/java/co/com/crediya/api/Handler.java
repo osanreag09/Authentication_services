@@ -1,8 +1,12 @@
 package co.com.crediya.api;
 
+import co.com.crediya.api.dtos.UserLoginRequestDTO;
 import co.com.crediya.api.dtos.UserRequestDTO;
+import co.com.crediya.api.mappers.LoginMapper;
 import co.com.crediya.api.mappers.UserMapper;
 import co.com.crediya.api.util.ValidationUtil;
+import co.com.crediya.usecase.registeruser.exception.InvalidUserDataException;
+import co.com.crediya.usecase.registeruser.gateways.LoginUser;
 import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
 import co.com.crediya.usecase.registeruser.gateways.UserInfo;
 import jakarta.validation.Validator;
@@ -21,6 +25,7 @@ public class Handler {
     private final Validator validator;
     private final RegisterUser registerUser;
     private final UserInfo userInfo;
+    private final LoginUser loginUser;
 
     public Mono<ServerResponse> registerUser(ServerRequest request) {
         return request.bodyToMono(UserRequestDTO.class)
@@ -45,5 +50,19 @@ public class Handler {
                     HttpStatus.NOT_FOUND,
                     "User not found: " + email
                 )));
+    }
+
+    public Mono<ServerResponse> login(ServerRequest request) {
+        return request.bodyToMono(UserLoginRequestDTO.class)
+                .flatMap(login -> loginUser.loginUser(login.getEmail(), login.getPassword())
+                        .map(LoginMapper::toLoginResponse)
+                        .flatMap(loginResponse -> ServerResponse.ok()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(loginResponse)
+                        )
+                        .onErrorResume(InvalidUserDataException.class, e ->
+                                ServerResponse.status(HttpStatus.UNAUTHORIZED).build()
+                        )
+                );
     }
 }
