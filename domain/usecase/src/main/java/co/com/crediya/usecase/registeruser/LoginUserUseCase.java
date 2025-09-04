@@ -1,6 +1,7 @@
 package co.com.crediya.usecase.registeruser;
 
 import co.com.crediya.model.LoginResponse;
+import co.com.crediya.model.gateways.PasswordEncoderGateway;
 import co.com.crediya.model.user.gateways.RoleRepository;
 import co.com.crediya.model.user.gateways.UserRepository;
 import co.com.crediya.usecase.registeruser.exception.InvalidUserDataException;
@@ -15,11 +16,12 @@ public class LoginUserUseCase implements LoginUser {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final TokenGenerator tokenGenerator;
+    private final PasswordEncoderGateway passwordEncoder;
 
     @Override
     public Mono<LoginResponse> loginUser(String email, String password) {
         return userRepository.getUserByEmail(email)
-                .filter(user -> password.equals(user.getPassword()))
+                .filter(user -> passwordEncoder.matches(password, user.getPassword()))
                 .switchIfEmpty(Mono.error(new InvalidUserDataException("Invalid credentials")))
                 .flatMap(user -> {
                     return roleRepository.getRoleById(user.getRol().getId())

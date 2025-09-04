@@ -1,7 +1,9 @@
 package co.com.crediya.api;
 
 import co.com.crediya.api.dtos.UserRequestDTO;
+import co.com.crediya.model.user.RolUser;
 import co.com.crediya.model.user.User;
+import co.com.crediya.usecase.registeruser.gateways.LoginUser;
 import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
 import co.com.crediya.usecase.registeruser.gateways.UserInfo;
 import jakarta.validation.ConstraintViolation;
@@ -46,6 +48,9 @@ class HandlerTest {
     @Mock
     private ServerRequest serverRequest;
 
+    @Mock
+    private LoginUser loginUser;
+
     @InjectMocks
     private Handler handler;
 
@@ -62,6 +67,8 @@ class HandlerTest {
                 .address("123 Test St")
                 .phone("1234567890")
                 .baseSalary(3000.0)
+                .password("password")
+                .rol(1L)
                 .build();
 
         savedUser = User.builder()
@@ -73,6 +80,8 @@ class HandlerTest {
                 .address("123 Test St")
                 .phone("1234567890")
                 .baseSalary(3000.0)
+                .password("password")
+                .rol(RolUser.builder().name("ADMIN").build())
                 .build();
     }
 
@@ -152,6 +161,8 @@ class HandlerTest {
                 .email(email)
                 .firstName("Test")
                 .lastName("User")
+                .rol(RolUser.builder().name("ADMIN").build())
+                .password("password")
                 .build();
 
         when(serverRequest.pathVariable("email")).thenReturn(email);

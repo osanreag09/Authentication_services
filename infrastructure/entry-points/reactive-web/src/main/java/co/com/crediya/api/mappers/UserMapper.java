@@ -3,6 +3,7 @@ package co.com.crediya.api.mappers;
 
 import co.com.crediya.api.dtos.UserRequestDTO;
 import co.com.crediya.api.dtos.UserResponseDTO;
+import co.com.crediya.model.user.RolUser;
 import co.com.crediya.model.user.User;
 
 public class UserMapper {
@@ -20,6 +21,8 @@ public class UserMapper {
                 .phone(dto.getPhone())
                 .email(dto.getEmail())
                 .baseSalary(dto.getBaseSalary())
+                .password(dto.getPassword())
+                .rol(RolUser.builder().id(dto.getRol()).build())
                 .build();
     }
 
@@ -29,6 +32,7 @@ public class UserMapper {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())
+                .rol(user.getRol().getId())
                 .build();
     }
 }

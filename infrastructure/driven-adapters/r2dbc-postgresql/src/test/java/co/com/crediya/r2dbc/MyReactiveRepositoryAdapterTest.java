@@ -1,5 +1,6 @@
 package co.com.crediya.r2dbc;
 
+import co.com.crediya.model.user.RolUser;
 import co.com.crediya.model.user.User;
 import co.com.crediya.r2dbc.entity.UserEntity;
 import co.com.crediya.r2dbc.mapper.DataMapper;
@@ -52,6 +53,11 @@ class MyReactiveRepositoryAdapterTest {
                 .address("123 Test St")
                 .phone("1234567890")
                 .baseSalary(3000.0)
+                .rol(RolUser.builder()
+                        .id(1L)
+                        .name("ADMIN")
+                        .description("ADMIN")
+                        .build())
                 .build();
 
         testUserEntity = DataMapper.toEntity(testUser);

@@ -46,4 +46,12 @@ public class UserRequestDTO {
     @NotNull(message = "Base salary cannot be null")
     @Schema(description = "User's base salary", example = "50000.00")
     private Double baseSalary;
+
+    @NotBlank(message = "Password cannot be empty")
+    @Schema(description = "User's password", example = "password123")
+    private String password;
+
+    @NotNull(message = "Role cannot be null")
+    @Schema(description = "User's role", example = "1")
+    private Long rol;
 }

@@ -22,4 +22,6 @@ public class UserResponseDTO {
     private String lastName;
     @Schema(description = "User's email address", example = "john.doe@example.com")
     private String email;
+    @Schema(description = "User's role", example = "1")
+    private Long rol;
 }

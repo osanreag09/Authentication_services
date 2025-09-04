@@ -1,6 +1,11 @@
 package co.com.crediya.config;
 
+import co.com.crediya.model.gateways.PasswordEncoderGateway;
+import co.com.crediya.model.user.gateways.RoleRepository;
 import co.com.crediya.model.user.gateways.UserRepository;
+import co.com.crediya.usecase.registeruser.gateways.LoginUser;
+import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
+import co.com.crediya.usecase.registeruser.gateways.TokenGenerator;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -40,6 +45,31 @@ public class UseCasesConfigTest {
         @Bean
         public UserRepository userRepository() {
             return Mockito.mock(UserRepository.class);
+        }
+
+        @Bean
+        public RoleRepository roleRepository() {
+            return Mockito.mock(RoleRepository.class);
+        }
+
+        @Bean
+        public LoginUser loginUser() {
+            return Mockito.mock(LoginUser.class);
+        }
+
+        @Bean
+        public RegisterUser registerUser() {
+            return Mockito.mock(RegisterUser.class);
+        }
+
+        @Bean
+        public PasswordEncoderGateway passwordEncoderGateway (){
+            return Mockito.mock(PasswordEncoderGateway.class);
+        }
+
+        @Bean
+        public TokenGenerator tokenGenerator () {
+            return Mockito.mock(TokenGenerator.class);
         }
     }
 

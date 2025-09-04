@@ -111,7 +111,7 @@ public class RouterRest {
     })
     public RouterFunction<ServerResponse> routerFunction(Handler handler, JwtUtil jwtUtil) {
         return route(POST("/api/v1/usuarios"),
-                request -> hasAnyRole(request, jwtUtil, "ADMIN", "ASSESSOR")
+                request -> hasAnyRole(request, jwtUtil, "ADMIN", "ASSESSOR", "CLIENT")
                         .flatMap(hasAccess -> {
                             if (hasAccess) {
                                 return handler.registerUser(request);
@@ -120,7 +120,7 @@ public class RouterRest {
                             }
                         }))
                 .andRoute(GET("/api/v1/usuarios/{email}"),
-                        request -> hasAnyRole(request, jwtUtil, "ADMIN", "ASSESSOR","CLIENT")
+                        request -> hasAnyRole(request, jwtUtil, "ADMIN")
                                 .flatMap(hasAccess -> {
                                     if (hasAccess) {
                                         return handler.getUserByEmail(request);

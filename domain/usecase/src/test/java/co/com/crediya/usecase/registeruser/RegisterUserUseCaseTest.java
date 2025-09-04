@@ -1,5 +1,7 @@
 package co.com.crediya.usecase.registeruser;
 
+import co.com.crediya.model.gateways.PasswordEncoderGateway;
+import co.com.crediya.model.user.RolUser;
 import co.com.crediya.model.user.User;
 import co.com.crediya.model.user.gateways.UserRepository;
 import co.com.crediya.usecase.registeruser.exception.InvalidUserDataException;
@@ -24,6 +26,9 @@ class RegisterUserUseCaseTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PasswordEncoderGateway passwordEncoder;
+
     @InjectMocks
     private RegisterUserUseCase registerUserUseCase;
 
@@ -40,7 +45,11 @@ class RegisterUserUseCaseTest {
                 LocalDate.now(),
                 "Calle siempre vida"
                 ,"1234567890"
-                ,"john.doe@example.com", 16000000L);
+                ,"john.doe@example.com",
+                16000000L,
+                "12345",
+                RolUser.builder().name("CLIENT").build()
+                );
 
         userWithLowSalary = new User(2L,
                 "Jane",
@@ -49,7 +58,9 @@ class RegisterUserUseCaseTest {
                 "calle siempre vida",
                 "1234567890",
                 "jane.doe@example.com",
-                -1000L);
+                -1000L,
+                "12345",
+                RolUser.builder().name("CLIENT").build());
 
         validUser = User.builder()
                 .id(1L)
@@ -79,15 +90,27 @@ class RegisterUserUseCaseTest {
     void saveUser_WithValidData_ShouldRegisterUser() {
         // Arrange
         when(userRepository.existByEmail(validUser.getEmail())).thenReturn(Mono.just(false));
-        when(userRepository.saveUser(validUser)).thenReturn(Mono.just(validUser));
+        when(passwordEncoder.encode(validUser.getPassword())).thenReturn("encodedPassword");
+        when(userRepository.saveUser(any(User.class))).thenAnswer(invocation -> {
+            User userToSave = invocation.getArgument(0);
+            return Mono.just(userToSave);
+        });
 
-        // Act & Assert
-        StepVerifier.create(registerUserUseCase.registerUser(validUser))
-                .expectNext(validUser)
+        // Act
+        Mono<User> result = registerUserUseCase.registerUser(validUser);
+
+        // Assert
+        StepVerifier.create(result)
+                .assertNext(savedUser -> {
+                    assertNotNull(savedUser);
+                    assertEquals(validUser.getEmail(), savedUser.getEmail());
+                    assertEquals("encodedPassword", savedUser.getPassword());
+                })
                 .verifyComplete();
 
-        verify(userRepository).existByEmail(validUser.getEmail());
-        verify(userRepository).saveUser(validUser);
+        verify(userRepository, times(1)).existByEmail(validUser.getEmail());
+        verify(userRepository, times(1)).saveUser(any(User.class));
+        verify(passwordEncoder, times(1)).encode(validUser.getPassword());
     }
 
     @Test
