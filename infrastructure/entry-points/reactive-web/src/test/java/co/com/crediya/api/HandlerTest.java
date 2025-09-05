@@ -1,8 +1,12 @@
 package co.com.crediya.api;
 
+import co.com.crediya.api.dtos.LoginResponseDTO;
+import co.com.crediya.api.dtos.UserLoginRequestDTO;
 import co.com.crediya.api.dtos.UserRequestDTO;
+import co.com.crediya.model.LoginResponse;
 import co.com.crediya.model.user.RolUser;
 import co.com.crediya.model.user.User;
+import co.com.crediya.usecase.registeruser.exception.InvalidUserDataException;
 import co.com.crediya.usecase.registeruser.gateways.LoginUser;
 import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
 import co.com.crediya.usecase.registeruser.gateways.UserInfo;
@@ -28,6 +32,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -198,5 +203,65 @@ class HandlerTest {
                 .verify();
 
         verify(userInfo).getUserByEmail(email);
+    }
+
+    @Test
+    void login_WithValidCredentials_ReturnsToken() {
+        // Arrange
+        UserLoginRequestDTO loginRequest = new UserLoginRequestDTO("test@example.com", "password");
+        LoginResponse loginResponse = LoginResponse.builder()
+                .token("token")
+                .email("test@example.com")
+                .role("USER")
+                .fullName("Test User")
+                .build();
+
+        when(serverRequest.bodyToMono(UserLoginRequestDTO.class))
+                .thenReturn(Mono.just(loginRequest));
+        when(loginUser.loginUser(loginRequest.getEmail(), loginRequest.getPassword()))
+                .thenReturn(Mono.just(loginResponse));
+
+        // Act & Assert
+        StepVerifier.create(handler.login(serverRequest))
+                .assertNext(response -> {
+                    assertEquals(HttpStatus.OK, response.statusCode());
+                })
+                .verifyComplete();
+
+        verify(loginUser).loginUser(loginRequest.getEmail(), loginRequest.getPassword());
+    }
+
+    @Test
+    void login_WithInvalidCredentials_ReturnsUnauthorized() {
+        // Arrange
+        UserLoginRequestDTO loginRequest = new UserLoginRequestDTO("test@example.com", "wrongpassword");
+
+        when(serverRequest.bodyToMono(UserLoginRequestDTO.class))
+                .thenReturn(Mono.just(loginRequest));
+        when(loginUser.loginUser(anyString(), anyString()))
+                .thenReturn(Mono.error(new InvalidUserDataException("Invalid credentials")));
+
+        // Act & Assert
+        StepVerifier.create(handler.login(serverRequest))
+                .assertNext(response -> {
+                    assertEquals(HttpStatus.UNAUTHORIZED, response.statusCode());
+                })
+                .verifyComplete();
+
+        verify(loginUser).loginUser(loginRequest.getEmail(), loginRequest.getPassword());
+    }
+
+    @Test
+    void login_WithInvalidRequest_ReturnsBadRequest() {
+        // Arrange
+        when(serverRequest.bodyToMono(UserLoginRequestDTO.class))
+                .thenReturn(Mono.error(new RuntimeException("Invalid request")));
+
+        // Act & Assert
+        StepVerifier.create(handler.login(serverRequest))
+                .expectError(RuntimeException.class)
+                .verify();
+
+        verify(loginUser, never()).loginUser(anyString(), anyString());
     }
 }

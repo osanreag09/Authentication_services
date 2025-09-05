@@ -12,6 +12,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.transaction.ReactiveTransactionManager;
+import org.springframework.transaction.reactive.TransactionalOperator;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -20,6 +22,7 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -130,5 +133,38 @@ class MyReactiveRepositoryAdapterTest {
                 .verify();
 
         verify(repository, times(1)).save(any(UserEntity.class));
+    }
+
+    @Test
+    void getUserByEmail_WhenUserExists_ShouldReturnUser() {
+       when(repository.findByEmail(anyString())).thenReturn(Mono.just(testUserEntity));
+
+       Mono<User> result = repositoryAdapter.getUserByEmail("john.doe@example.com");
+
+       StepVerifier.create(result)
+                .assertNext(user -> {
+                    assertNotNull(user);
+                    assertEquals(testUser.getEmail(), user.getEmail());
+                    assertEquals(testUser.getFirstName(), user.getFirstName());
+                    assertEquals(testUser.getLastName(), user.getLastName());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void getUserByEmail_WhenUserNotExists_ShouldReturnEmptyMono() {
+        // Arrange
+        String testEmail = "nonexistent@example.com";
+        when(repository.findByEmail(testEmail)).thenReturn(Mono.empty());
+
+        // Act
+        Mono<User> result = repositoryAdapter.getUserByEmail(testEmail);
+
+        // Assert
+        StepVerifier.create(result)
+                .expectNextCount(0)
+                .verifyComplete();
+
+        verify(repository, times(1)).findByEmail(testEmail);
     }
 }
