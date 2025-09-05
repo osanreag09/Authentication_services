@@ -130,7 +130,7 @@ public class RouterRestTest {
                 .email("test@example.com")
                 .firstName("Test")
                 .lastName("User")
-                .rol(mockRole)  // Make sure to set the role
+                .rol(mockRole)
                 .build();
 
         when(registerUserUseCase.registerUser(any(User.class))).thenReturn(Mono.just(mockUser));
@@ -173,8 +173,8 @@ public class RouterRestTest {
         // Given
         String invalidRequestBody = """
                 {
-                    "email": "",
-                    "password": ""
+                    "email": "invalid-email",
+                    "password": "123"
                 }
                 """;
 

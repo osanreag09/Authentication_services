@@ -12,12 +12,19 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
-
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 public class AuthorizationFilter implements WebFilter {
+
     private final JwtUtil jwtUtil;
+
+    private final Map<String, Set<String>> securedPaths = Map.of(
+            "/api/v1/usuarios", Set.of("ADMIN", "ASSESSOR"),
+            "/api/v1/usuarios/{email}", Set.of("ADMIN")
+    );
 
     public AuthorizationFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
@@ -25,14 +32,15 @@ public class AuthorizationFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        // Skip filter for login endpoint
-        if (exchange.getRequest().getPath().toString().equals("/api/v1/login")) {
+        String path = exchange.getRequest().getPath().value();
+
+        if (isPublicEndpoint(path)) {
             return chain.filter(exchange);
         }
 
         String token = getTokenFromRequest(exchange.getRequest());
         if (token == null) {
-            log.warn("Missing token");
+            log.warn("Missing token in request to {}", path);
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
@@ -48,22 +56,60 @@ public class AuthorizationFilter implements WebFilter {
                         return exchange.getResponse().setComplete();
                     }
 
-                    // Set up authentication with the single role
+                    if (!hasAccess(path, role)) {
+                        log.warn("Access denied for user {} with role {} to path {}", username, role, path);
+                        exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                        return exchange.getResponse().setComplete();
+                    }
+
+
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                             username,
                             null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role))
                     );
 
-                    // Set the authentication in the context
                     return chain.filter(exchange)
                             .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
                 })
                 .onErrorResume(e -> {
-                    log.warn("Invalid token: {}", e.getMessage());
+                    log.warn("Token validation failed: {}", e.getMessage());
                     exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                     return exchange.getResponse().setComplete();
                 });
+    }
+
+    private boolean isPublicEndpoint(String path) {
+        return path.equals("/api/v1/login") ||
+                path.equals("/api/v1/health") ||
+                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/swagger-ui") ||
+                path.startsWith("/webjars") ||
+                path.startsWith("/swagger-resources") ||
+                path.endsWith(".html") ||
+                path.endsWith(".css") ||
+                path.endsWith(".js") ||
+                path.endsWith(".png") ||
+                path.endsWith(".json") ||
+                path.equals("/favicon.ico");
+    }
+
+    private boolean hasAccess(String path, String userRole) {
+        String normalizedPath = path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
+
+        for (Map.Entry<String, Set<String>> entry : securedPaths.entrySet()) {
+            String pattern = entry.getKey();
+
+            String regex = pattern
+                    .replace("/", "\\/")
+                    .replace("{", "(?<")
+                    .replace("}", ">[^\\/]+)") + "/?$";
+            if (normalizedPath.matches(regex)) {
+                return entry.getValue().stream()
+                        .anyMatch(role -> role.equals(userRole));
+            }
+        }
+        return true;
     }
 
     private String getTokenFromRequest(ServerHttpRequest request) {
