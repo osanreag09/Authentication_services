@@ -22,8 +22,7 @@ public class AuthorizationFilter implements WebFilter {
     private final JwtUtil jwtUtil;
 
     private final Map<String, Set<String>> securedPaths = Map.of(
-            "/api/v1/usuarios", Set.of("ADMIN", "ASSESSOR"),
-            "/api/v1/usuarios/{email}", Set.of("ADMIN")
+            "/api/v1/usuarios", Set.of("ADMIN", "ASSESSOR")
     );
 
     public AuthorizationFilter(JwtUtil jwtUtil) {
@@ -56,12 +55,25 @@ public class AuthorizationFilter implements WebFilter {
                         return exchange.getResponse().setComplete();
                     }
 
-                    if (!hasAccess(path, role)) {
-                        log.warn("Access denied for user {} with role {} to path {}", username, role, path);
+                    // Special handling for user detail endpoint
+                    if (path.matches("/api/v1/usuarios/[^/]+")) {
+                        String requestedEmail = path.substring(path.lastIndexOf('/') + 1);
+
+                        // Allow access if user is ADMIN/ASSESSOR or if it's their own email
+                        if (!"ADMIN".equals(role) && !"ASSESSOR".equals(role) && !username.equals(requestedEmail)) {
+                            log.warn("Access denied for user {} with role {} to path {}",
+                                    username, role, path);
+                            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                            return exchange.getResponse().setComplete();
+                        }
+                    }
+                    // For all other endpoints, use the existing role-based access control
+                    else if (!hasAccess(path, role)) {
+                        log.warn("Access denied for user {} with role {} to path {}",
+                                username, role, path);
                         exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
                         return exchange.getResponse().setComplete();
                     }
-
 
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                             username,
@@ -104,6 +116,7 @@ public class AuthorizationFilter implements WebFilter {
                     .replace("/", "\\/")
                     .replace("{", "(?<")
                     .replace("}", ">[^\\/]+)") + "/?$";
+
             if (normalizedPath.matches(regex)) {
                 return entry.getValue().stream()
                         .anyMatch(role -> role.equals(userRole));
