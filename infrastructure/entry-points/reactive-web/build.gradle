@@ -29,9 +29,6 @@ dependencies {
     // Para pruebas de seguridad
     testImplementation 'org.springframework.security:spring-security-test'
 
-    // Para codificación de contraseñas
-    implementation 'org.springframework.security:spring-security-crypto'
-
     // Para validación de anotaciones
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 }

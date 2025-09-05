@@ -1,4 +1,4 @@
-package co.com.crediya.config.security;
+package co.com.crediya.r2dbc.config.security;
 
 import co.com.crediya.model.gateways.PasswordEncoderGateway;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
