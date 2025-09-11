@@ -1,5 +1,6 @@
 package co.com.crediya.r2dbc.mapper;
 
+import co.com.crediya.model.user.RolUser;
 import co.com.crediya.model.user.User;
 import co.com.crediya.r2dbc.entity.UserEntity;
 
@@ -19,6 +20,8 @@ public class DataMapper {
                 .phone(user.getPhone())
                 .email(user.getEmail())
                 .baseSalary(user.getBaseSalary())
+                .password(user.getPassword())
+                .rolId(user.getRol().getId())
                 .build();
     }
 
@@ -32,6 +35,8 @@ public class DataMapper {
                 .phone(entity.getPhone())
                 .email(entity.getEmail())
                 .baseSalary(entity.getBaseSalary())
+                .password(entity.getPassword())
+                .rol(RolUser.builder().id(entity.getRolId()).build())
                 .build();
     }
 

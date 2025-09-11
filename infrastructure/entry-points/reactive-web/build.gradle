@@ -7,8 +7,7 @@ dependencies {
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
     implementation 'org.hibernate.validator:hibernate-validator:8.0.1.Final'
-    
-    // SpringDoc OpenAPI for Swagger documentation (compatible with Spring Boot 3.5.x)
+
     implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.5.0'
     implementation('org.springdoc:springdoc-openapi-starter-common') {
         exclude group: 'org.springframework', module: 'spring-webmvc'
@@ -17,4 +16,19 @@ dependencies {
     // Jackson datatype for Java 8 date/time support
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // Spring Security & JWT
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // Para soporte de Reactor en tests
+    testImplementation 'io.projectreactor:reactor-test'
+
+    // Para pruebas de seguridad
+    testImplementation 'org.springframework.security:spring-security-test'
+
+    // Para validación de anotaciones
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 }

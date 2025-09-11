@@ -1,5 +1,7 @@
 package co.com.crediya.api;
 
+import co.com.crediya.api.dtos.LoginResponseDTO;
+import co.com.crediya.api.dtos.UserLoginRequestDTO;
 import co.com.crediya.api.dtos.UserRequestDTO;
 import co.com.crediya.api.dtos.UserResponseDTO;
 import co.com.crediya.api.exceptions.ErrorResponse;
@@ -17,14 +19,55 @@ import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
 @Configuration
+@Tag(name = "Authentication", description = "Authentication APIs")
 @Tag(name = "User", description = "User management APIs")
 public class RouterRest {
+
     @Bean
     @RouterOperations({
+            @RouterOperation(
+                    path = "/api/v1/login",
+                    method = {org.springframework.web.bind.annotation.RequestMethod.POST},
+                    beanClass = Handler.class,
+                    beanMethod = "login",
+                    operation = @Operation(
+                            operationId = "login",
+                            summary = "User login",
+                            description = "Authenticate user and get JWT token",
+                            tags = {"Authentication"},
+                            requestBody = @RequestBody(
+                                    description = "User credentials",
+                                    required = true,
+                                    content = @Content(
+                                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                            schema = @Schema(implementation = UserLoginRequestDTO.class)
+                                    )
+                            ),
+                            responses = {
+                                    @ApiResponse(
+                                            responseCode = "200",
+                                            description = "Authentication successful",
+                                            content = @Content(
+                                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                                    schema = @Schema(implementation = LoginResponseDTO.class)
+                                            )
+                                    ),
+                                    @ApiResponse(
+                                            responseCode = "401",
+                                            description = "Invalid credentials",
+                                            content = @Content(
+                                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                                    schema = @Schema(implementation = ErrorResponse.class)
+                                            )
+                                    )
+                            }
+                    )
+            ),
             @RouterOperation(
                     path = "/api/v1/usuarios",
                     method = {org.springframework.web.bind.annotation.RequestMethod.POST},
@@ -62,9 +105,49 @@ public class RouterRest {
                                     )
                             }
                     )
+            ),
+            @RouterOperation(
+                    path = "/api/v1/usuarios/{email}",
+                    method = {org.springframework.web.bind.annotation.RequestMethod.GET},
+                    beanClass = Handler.class,
+                    beanMethod = "getUserByEmail",
+                    operation = @Operation(
+                            operationId = "getUserByEmail",
+                            summary = "Get user by email",
+                            description = "Retrieves a user's details by their email address",
+                            tags = {"User"},
+                            parameters = {
+                                    @io.swagger.v3.oas.annotations.Parameter(
+                                            name = "email",
+                                            description = "Email address of the user to retrieve",
+                                            required = true,
+                                            in = io.swagger.v3.oas.annotations.enums.ParameterIn.PATH
+                                    )
+                            },
+                            responses = {
+                                    @ApiResponse(
+                                            responseCode = "200",
+                                            description = "User found and returned successfully",
+                                            content = @Content(
+                                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                                    schema = @Schema(implementation = UserResponseDTO.class)
+                                            )
+                                    ),
+                                    @ApiResponse(
+                                            responseCode = "404",
+                                            description = "User not found",
+                                            content = @Content(
+                                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                                    schema = @Schema(implementation = ErrorResponse.class)
+                                            )
+                                    )
+                            }
+                    )
             )
     })
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
-        return route(POST("/api/v1/usuarios"), handler::registerUser);
+        return route(POST("/api/v1/login"), handler::login)
+                .andRoute(POST("/api/v1/usuarios"), handler::registerUser)
+                .andRoute(GET("/api/v1/usuarios/{email}"), handler::getUserByEmail);
     }
 }

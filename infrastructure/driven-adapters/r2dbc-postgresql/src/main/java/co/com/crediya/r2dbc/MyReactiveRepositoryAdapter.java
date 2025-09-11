@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.ReactiveTransactionManager;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -36,5 +35,11 @@ public class MyReactiveRepositoryAdapter extends ReactiveAdapterOperations<
     @Override
     public Mono<Boolean> existByEmail(String email) {
         return repository.existsByEmail(email);
+    }
+
+    @Override
+    public Mono<User> getUserByEmail(String email) {
+        return repository.findByEmail(email)
+                .map(DataMapper::toDomain);
     }
 }

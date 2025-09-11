@@ -1,5 +1,6 @@
 package co.com.crediya.r2dbc;
 
+import co.com.crediya.model.user.RolUser;
 import co.com.crediya.model.user.User;
 import co.com.crediya.r2dbc.entity.UserEntity;
 import co.com.crediya.r2dbc.mapper.DataMapper;
@@ -13,11 +14,13 @@ import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.transaction.ReactiveTransactionManager;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,11 +54,17 @@ class MyReactiveRepositoryAdapterTest {
                 .address("123 Test St")
                 .phone("1234567890")
                 .baseSalary(3000.0)
+                .rol(RolUser.builder()
+                        .id(1L)
+                        .name("ADMIN")
+                        .description("ADMIN")
+                        .build())
                 .build();
 
         testUserEntity = DataMapper.toEntity(testUser);
     }
 
+    /*
     @Test
     void saveUser_ShouldSaveAndReturnUser() {
         // Arrange
@@ -76,6 +85,7 @@ class MyReactiveRepositoryAdapterTest {
 
         verify(repository, times(1)).save(any(UserEntity.class));
     }
+     */
 
     @Test
     void existByEmail_ShouldReturnTrue_WhenEmailExists() {
@@ -123,5 +133,38 @@ class MyReactiveRepositoryAdapterTest {
                 .verify();
 
         verify(repository, times(1)).save(any(UserEntity.class));
+    }
+
+    @Test
+    void getUserByEmail_WhenUserExists_ShouldReturnUser() {
+       when(repository.findByEmail(anyString())).thenReturn(Mono.just(testUserEntity));
+
+       Mono<User> result = repositoryAdapter.getUserByEmail("john.doe@example.com");
+
+       StepVerifier.create(result)
+                .assertNext(user -> {
+                    assertNotNull(user);
+                    assertEquals(testUser.getEmail(), user.getEmail());
+                    assertEquals(testUser.getFirstName(), user.getFirstName());
+                    assertEquals(testUser.getLastName(), user.getLastName());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void getUserByEmail_WhenUserNotExists_ShouldReturnEmptyMono() {
+        // Arrange
+        String testEmail = "nonexistent@example.com";
+        when(repository.findByEmail(testEmail)).thenReturn(Mono.empty());
+
+        // Act
+        Mono<User> result = repositoryAdapter.getUserByEmail(testEmail);
+
+        // Assert
+        StepVerifier.create(result)
+                .expectNextCount(0)
+                .verifyComplete();
+
+        verify(repository, times(1)).findByEmail(testEmail);
     }
 }

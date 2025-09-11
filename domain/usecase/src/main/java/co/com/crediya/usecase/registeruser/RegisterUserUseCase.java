@@ -1,5 +1,6 @@
 package co.com.crediya.usecase.registeruser;
 
+import co.com.crediya.model.gateways.PasswordEncoderGateway;
 import co.com.crediya.model.user.User;
 import co.com.crediya.model.user.gateways.UserRepository;
 import co.com.crediya.usecase.registeruser.exception.InvalidUserDataException;
@@ -11,21 +12,30 @@ public class RegisterUserUseCase implements RegisterUser {
     private static final Long MIN_BASE_SALARY = 0L;
 
     private final UserRepository userRepository;
+    private final PasswordEncoderGateway passwordEncoder;
 
-    public RegisterUserUseCase(UserRepository userRepository) {
+    public RegisterUserUseCase(UserRepository userRepository, PasswordEncoderGateway passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Mono<User> registerUser(User user) {
-        return  validateUserSalary(user)
-                .then(userRepository.existByEmail(user.getEmail()))
-                .flatMap(exist -> {
-                    if(exist) {
-                        return Mono.error(new InvalidUserDataException("The email is already in use"));
-                    } else {
-                        return userRepository.saveUser(user);
-                    }
-                });
+        return validateUserSalary(user)
+                .then(Mono.defer(() ->
+                        userRepository.existByEmail(user.getEmail())
+                                .flatMap(exist -> {
+                                    if (exist) {
+                                        return Mono.error(new InvalidUserDataException("The email is already in use"));
+                                    } else {
+                                        // Hash the password before saving
+                                        String hashedPassword = passwordEncoder.encode(user.getPassword());
+                                        User userWithHashedPassword = user.toBuilder()
+                                                .password(hashedPassword)
+                                                .build();
+                                        return userRepository.saveUser(userWithHashedPassword);
+                                    }
+                                })
+                ));
     }
 
     private static Mono<Void> validateUserSalary(User user) {

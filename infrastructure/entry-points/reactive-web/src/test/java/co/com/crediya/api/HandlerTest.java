@@ -1,8 +1,15 @@
 package co.com.crediya.api;
 
+import co.com.crediya.api.dtos.LoginResponseDTO;
+import co.com.crediya.api.dtos.UserLoginRequestDTO;
 import co.com.crediya.api.dtos.UserRequestDTO;
+import co.com.crediya.model.LoginResponse;
+import co.com.crediya.model.user.RolUser;
 import co.com.crediya.model.user.User;
+import co.com.crediya.usecase.registeruser.exception.InvalidUserDataException;
+import co.com.crediya.usecase.registeruser.gateways.LoginUser;
 import co.com.crediya.usecase.registeruser.gateways.RegisterUser;
+import co.com.crediya.usecase.registeruser.gateways.UserInfo;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,8 +18,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -23,6 +32,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,10 +45,16 @@ class HandlerTest {
     private RegisterUser registerUserUseCase;
 
     @Mock
+    private UserInfo userInfo;
+
+    @Mock
     private Validator validator;
 
     @Mock
     private ServerRequest serverRequest;
+
+    @Mock
+    private LoginUser loginUser;
 
     @InjectMocks
     private Handler handler;
@@ -56,6 +72,8 @@ class HandlerTest {
                 .address("123 Test St")
                 .phone("1234567890")
                 .baseSalary(3000.0)
+                .password("password")
+                .rol(1L)
                 .build();
 
         savedUser = User.builder()
@@ -67,6 +85,8 @@ class HandlerTest {
                 .address("123 Test St")
                 .phone("1234567890")
                 .baseSalary(3000.0)
+                .password("password")
+                .rol(RolUser.builder().name("ADMIN").build())
                 .build();
     }
 
@@ -92,29 +112,34 @@ class HandlerTest {
     @Test
     void registerUser_WithInvalidData_ReturnsBadRequest() {
         // Arrange
-        ConstraintViolation<UserRequestDTO> violation = mock(ConstraintViolation.class);
-        when(violation.getMessage()).thenReturn("Email is required");
-
-        Set<ConstraintViolation<UserRequestDTO>> violations = Set.of(violation);
-        when(validator.validate(any(UserRequestDTO.class))).thenReturn(violations);
-
         UserRequestDTO invalidRequest = UserRequestDTO.builder()
                 .email("invalid-email")
                 .build();
 
-        // Mock the request body
+        // Create a constraint violation for the invalid email
+        ConstraintViolation<UserRequestDTO> violation = mock(ConstraintViolation.class);
+        when(violation.getMessage()).thenReturn("Email must have a valid domain");
+        Set<ConstraintViolation<UserRequestDTO>> violations = Set.of(violation);
+
+        // Mock the request body and validator
         when(serverRequest.bodyToMono(UserRequestDTO.class))
                 .thenReturn(Mono.just(invalidRequest));
+        when(validator.validate(any(UserRequestDTO.class))).thenReturn(violations);
 
         // Act
         Mono<ServerResponse> responseMono = handler.registerUser(serverRequest);
 
         // Assert
         StepVerifier.create(responseMono)
-                .assertNext(serverResponse -> {
-                    assertEquals(400, serverResponse.statusCode().value());
+                .expectErrorMatches(throwable -> {
+                    if (throwable instanceof ResponseStatusException) {
+                        ResponseStatusException ex = (ResponseStatusException) throwable;
+                        return ex.getStatusCode() == HttpStatus.BAD_REQUEST &&
+                               ex.getReason().contains("Email must have a valid domain");
+                    }
+                    return false;
                 })
-                .verifyComplete();
+                .verify();
 
         verify(validator).validate(any(UserRequestDTO.class));
         verify(registerUserUseCase, never()).registerUser(any(User.class));
@@ -130,5 +155,113 @@ class HandlerTest {
             );
         }
         assertTrue(violations.isEmpty(), "There are validation errors in the test data");
+    }
+
+    @Test
+    void getUserByEmail_WhenUserExists_ReturnsUser() {
+        // Arrange
+        String email = "test@example.com";
+        User user = User.builder()
+                .id(1L)
+                .email(email)
+                .firstName("Test")
+                .lastName("User")
+                .rol(RolUser.builder().name("ADMIN").build())
+                .password("password")
+                .build();
+
+        when(serverRequest.pathVariable("email")).thenReturn(email);
+        when(userInfo.getUserByEmail(email)).thenReturn(Mono.just(user));
+
+        // Act & Assert
+        StepVerifier.create(handler.getUserByEmail(serverRequest))
+                .assertNext(serverResponse -> {
+                    assertEquals(HttpStatus.OK, serverResponse.statusCode());
+                })
+                .verifyComplete();
+
+        verify(userInfo).getUserByEmail(email);
+    }
+
+    @Test
+    void getUserByEmail_WhenUserNotFound_ReturnsNotFound() {
+        // Arrange
+        String email = "nonexistent@example.com";
+        when(serverRequest.pathVariable("email")).thenReturn(email);
+        when(userInfo.getUserByEmail(email)).thenReturn(Mono.empty());
+
+        // Act & Assert
+        StepVerifier.create(handler.getUserByEmail(serverRequest))
+                .expectErrorMatches(throwable -> {
+                    if (throwable instanceof ResponseStatusException) {
+                        ResponseStatusException ex = (ResponseStatusException) throwable;
+                        return ex.getStatusCode() == HttpStatus.NOT_FOUND &&
+                               ex.getReason().equals("User not found: " + email);
+                    }
+                    return false;
+                })
+                .verify();
+
+        verify(userInfo).getUserByEmail(email);
+    }
+
+    @Test
+    void login_WithValidCredentials_ReturnsToken() {
+        // Arrange
+        UserLoginRequestDTO loginRequest = new UserLoginRequestDTO("test@example.com", "password");
+        LoginResponse loginResponse = LoginResponse.builder()
+                .token("token")
+                .email("test@example.com")
+                .role("USER")
+                .fullName("Test User")
+                .build();
+
+        when(serverRequest.bodyToMono(UserLoginRequestDTO.class))
+                .thenReturn(Mono.just(loginRequest));
+        when(loginUser.loginUser(loginRequest.getEmail(), loginRequest.getPassword()))
+                .thenReturn(Mono.just(loginResponse));
+
+        // Act & Assert
+        StepVerifier.create(handler.login(serverRequest))
+                .assertNext(response -> {
+                    assertEquals(HttpStatus.OK, response.statusCode());
+                })
+                .verifyComplete();
+
+        verify(loginUser).loginUser(loginRequest.getEmail(), loginRequest.getPassword());
+    }
+
+    @Test
+    void login_WithInvalidCredentials_ReturnsUnauthorized() {
+        // Arrange
+        UserLoginRequestDTO loginRequest = new UserLoginRequestDTO("test@example.com", "wrongpassword");
+
+        when(serverRequest.bodyToMono(UserLoginRequestDTO.class))
+                .thenReturn(Mono.just(loginRequest));
+        when(loginUser.loginUser(anyString(), anyString()))
+                .thenReturn(Mono.error(new InvalidUserDataException("Invalid credentials")));
+
+        // Act & Assert
+        StepVerifier.create(handler.login(serverRequest))
+                .assertNext(response -> {
+                    assertEquals(HttpStatus.UNAUTHORIZED, response.statusCode());
+                })
+                .verifyComplete();
+
+        verify(loginUser).loginUser(loginRequest.getEmail(), loginRequest.getPassword());
+    }
+
+    @Test
+    void login_WithInvalidRequest_ReturnsBadRequest() {
+        // Arrange
+        when(serverRequest.bodyToMono(UserLoginRequestDTO.class))
+                .thenReturn(Mono.error(new RuntimeException("Invalid request")));
+
+        // Act & Assert
+        StepVerifier.create(handler.login(serverRequest))
+                .expectError(RuntimeException.class)
+                .verify();
+
+        verify(loginUser, never()).loginUser(anyString(), anyString());
     }
 }

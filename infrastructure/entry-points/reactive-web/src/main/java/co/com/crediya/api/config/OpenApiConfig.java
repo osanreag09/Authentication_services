@@ -1,5 +1,6 @@
 package co.com.crediya.api.config;
 
+import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
@@ -17,18 +18,22 @@ public class OpenApiConfig {
                         .title("CrediYa API")
                         .description("Documentación de la API de CrediYa")
                         .version("1.0.0")
-                        .license(new License().name("Apache 2.0").url("http://springdoc.org")));
+                        .license(new License()
+                                .name("Apache 2.0")
+                                .url("http://springdoc.org")
+                        )
+                )
+                .externalDocs(new ExternalDocumentation()
+                        .description("Documentación de CrediYa")
+                        .url("/v3/api-docs")
+                );
     }
-    
+
     @Bean
-    public GroupedOpenApi publicApi(OpenAPI openAPI) {
+    public GroupedOpenApi publicApi() {
         return GroupedOpenApi.builder()
-                .group("public-apis")
+                .group("default")
                 .pathsToMatch("/api/**")
-                .addOpenApiCustomizer(openApi -> {
-                    openApi.setInfo(openAPI.getInfo());
-                    // Add any additional customizations here
-                })
                 .build();
     }
 }
